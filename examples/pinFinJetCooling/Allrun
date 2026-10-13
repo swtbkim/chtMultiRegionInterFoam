@@ -1,0 +1,33 @@
+#!/bin/sh
+cd "${0%/*}" || exit                                # run from this directory
+. ${WM_PROJECT_DIR:?}/bin/tools/RunFunctions        # tutorial run functions
+#------------------------------------------------------------------------------
+
+# 1. Background mesh
+runApplication blockMesh
+
+# 2. Tag cell zones (chip, heatSink, fluid) and the nozzle face set
+runApplication topoSet
+
+# 3. Carve the jet nozzle inlet out of the top patch
+runApplication createPatch -overwrite
+
+# 4. Split the single mesh into the fluid + solid region meshes,
+#    auto-creating the <region>_to_<neighbour> coupled interfaces
+runApplication splitMeshRegions -cellZones -overwrite
+
+# 5. Initial / boundary fields per region
+restore0Dir
+
+# 6. Decompose every region for parallel running (per-region decomposeParDict)
+runApplication decomposePar -allRegions -force
+
+# 7. Parallel solve. The oversubscribe flag lets the 16 ranks start on hosts
+#    that report fewer MPI slots than cores (e.g. hyper-threaded WSL).
+export OMPI_MCA_rmaps_base_oversubscribe=1
+runParallel $(getApplication)
+
+# 8. Reconstruct the region fields for post-processing
+runApplication reconstructPar -allRegions -newTimes
+
+#------------------------------------------------------------------------------

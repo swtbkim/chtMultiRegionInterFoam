@@ -1,0 +1,17 @@
+#!/bin/sh
+cd "${0%/*}" || exit                                # run from this directory
+. ${WM_PROJECT_DIR:?}/bin/tools/CleanFunctions      # tutorial clean functions
+#------------------------------------------------------------------------------
+
+cleanCase0                                          # time dirs, logs, postProcessing, processors
+
+# region meshes created by splitMeshRegions (keep the authored thermo dicts)
+rm -rf constant/fluid/polyMesh
+rm -rf constant/heatSink/polyMesh
+rm -rf constant/chip/polyMesh
+rm -rf constant/polyMesh
+
+# fields auto-generated into 0/ by splitMeshRegions, and region 0/ dirs
+rm -rf 0
+
+#------------------------------------------------------------------------------

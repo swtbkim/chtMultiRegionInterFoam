@@ -1,0 +1,77 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      topoSetDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Coordinates in metres (mesh is already scaled).
+//   chip      : silicon die,           x,z in [8,24] mm, y in [0,2] mm
+//   heatSink  : aluminium base + 3x3   pins (2 mm square, y in [4,12] mm)
+//               base                   x,z in [8,24] mm, y in [2,4] mm
+//   fluid     : everything else (air, filled by the impinging water jet)
+
+actions
+(
+    // ---------------- chip (silicon die) ----------------
+    {
+        name    chipCells;  type cellSet;  action new;
+        source  boxToCell;  box (0.008 0.000 0.008) (0.024 0.002 0.024);
+    }
+    {
+        name chip; type cellZoneSet; action new;
+        source setToCellZone; set chipCells;
+    }
+
+    // ---------------- heat sink (base + pins) ----------------
+    {
+        name    heatSinkCells;  type cellSet;  action new;
+        source  boxToCell;      box (0.008 0.002 0.008) (0.024 0.004 0.024);   // base
+    }
+    // 3 x 3 pin array, 2 mm square, pitch 5 mm, height 8 mm (y 4->12 mm)
+    { name heatSinkCells; type cellSet; action add; source boxToCell; box (0.010 0.004 0.010) (0.012 0.012 0.012); }
+    { name heatSinkCells; type cellSet; action add; source boxToCell; box (0.015 0.004 0.010) (0.017 0.012 0.012); }
+    { name heatSinkCells; type cellSet; action add; source boxToCell; box (0.020 0.004 0.010) (0.022 0.012 0.012); }
+    { name heatSinkCells; type cellSet; action add; source boxToCell; box (0.010 0.004 0.015) (0.012 0.012 0.017); }
+    { name heatSinkCells; type cellSet; action add; source boxToCell; box (0.015 0.004 0.015) (0.017 0.012 0.017); }
+    { name heatSinkCells; type cellSet; action add; source boxToCell; box (0.020 0.004 0.015) (0.022 0.012 0.017); }
+    { name heatSinkCells; type cellSet; action add; source boxToCell; box (0.010 0.004 0.020) (0.012 0.012 0.022); }
+    { name heatSinkCells; type cellSet; action add; source boxToCell; box (0.015 0.004 0.020) (0.017 0.012 0.022); }
+    { name heatSinkCells; type cellSet; action add; source boxToCell; box (0.020 0.004 0.020) (0.022 0.012 0.022); }
+    {
+        name heatSink; type cellZoneSet; action new;
+        source setToCellZone; set heatSinkCells;
+    }
+
+    // ---------------- fluid = all cells minus chip minus heatSink ----------------
+    {
+        name    fluidCells; type cellSet; action new;
+        source  boxToCell;  box (-1 -1 -1) (1 1 1);
+    }
+    { name fluidCells; type cellSet; action delete; source cellToCell; set chipCells; }
+    { name fluidCells; type cellSet; action delete; source cellToCell; set heatSinkCells; }
+    {
+        name fluid; type cellZoneSet; action new;
+        source setToCellZone; set fluidCells;
+    }
+
+    // ---------------- nozzle faces (subset of the top "outlet" patch) ----------------
+    {
+        name    nozzleFaces; type faceSet; action new;
+        source  patchToFace; patch outlet;
+    }
+    {
+        name    nozzleFaces; type faceSet; action subset;
+        source  boxToFace;   box (0.014 0.020 0.014) (0.018 0.026 0.018);
+    }
+);
+
+// ************************************************************************* //

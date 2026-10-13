@@ -1,0 +1,33 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system/chip";
+    object      fvOptions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// GPU die dissipating 150 W, distributed uniformly over the whole chip region.
+gpuHeatSource
+{
+    type            scalarSemiImplicitSource;
+    active          true;
+
+    selectionMode   all;
+    volumeMode      absolute;        // injection rate in [W]
+
+    sources
+    {
+        h           (150 0);         // (Su Sp): 150 W source, 0 implicit part
+    }
+}
+
+// ************************************************************************* //

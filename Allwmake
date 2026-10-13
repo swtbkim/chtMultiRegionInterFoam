@@ -1,0 +1,13 @@
+#!/bin/sh
+cd "${0%/*}" || exit
+[ -n "$WM_PROJECT_DIR" ] || {
+    echo "Error: the OpenFOAM environment is not set."
+    echo "Source the OpenFOAM bashrc first, e.g.:"
+    echo "    source /usr/lib/openfoam/openfoam2412/etc/bashrc"
+    exit 1
+}
+
+# chtMultiRegionInterFoam. The bundled VoF headers (src/chtMultiRegionInterFoam/VoF)
+# are header-only and the shared CHT framework headers live alongside the solver, so
+# a single wmake of the solver directory suffices.
+wmake $* src/chtMultiRegionInterFoam

@@ -1,0 +1,52 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0/fluid";
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 0);
+
+boundaryField
+{
+    nozzle                          // 1.5 m/s downward water jet
+    {
+        type            fixedValue;
+        value           uniform (0 -1.5 0);
+    }
+    outlet
+    {
+        type            pressureInletOutletVelocity;
+        value           uniform (0 0 0);
+    }
+    bottom
+    {
+        type            noSlip;
+    }
+    walls
+    {
+        type            noSlip;
+    }
+    fluid_to_chip
+    {
+        type            noSlip;
+    }
+    fluid_to_heatSink
+    {
+        type            noSlip;
+    }
+}
+
+// ************************************************************************* //

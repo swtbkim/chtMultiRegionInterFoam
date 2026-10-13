@@ -1,0 +1,2 @@
+7e0915d147a94058a515315907bbfda441169411
+source: https://github.com/c-schubert/OpenFOAM--MHD--VoF-Solver-Collection

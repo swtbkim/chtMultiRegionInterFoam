@@ -1,0 +1,38 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2412                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fvSolution;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Top-level (no global mesh): supplies the outer-corrector count read by the
+// multi-region driver, plus the energy-coupling sub-loop control.
+//
+// nOuterCorrectors > 1 makes the fluid<->solid coupling implicit within each
+// time step: after the first full fluid+solid update the driver runs an
+// energy-only sub-loop ("energyCoupling") that re-solves the fluid temperature
+// and the solid conduction with the flow frozen, tightening the conjugate heat
+// balance at the coupled walls before the next outer corrector.
+//
+// Set nOuterCorrectors 1 to fall back to the cheapest, fully-explicit
+// (segregated) coupling - one fluid solve then one solid solve per step.
+PIMPLE
+{
+    nOuterCorrectors 2;
+
+    energyCoupling
+    {
+        iterations  2;
+    }
+}
+
+// ************************************************************************* //

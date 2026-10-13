@@ -1,0 +1,86 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2412                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+FoamFile
+{
+    version         2;
+    format          ascii;
+    class           dictionary;
+    object          controlDict;
+}
+
+application     chtMultiRegionInterFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         0.5;
+
+deltaT          1e-05;
+
+writeControl    adjustable;
+
+writeInterval   0.02;
+
+purgeWrite      0;
+
+writeFormat     binary;
+
+writePrecision  8;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable yes;
+
+adjustTimeStep  yes;
+
+maxCo           0.5;
+
+maxAlphaCo      0.5;
+
+maxDeltaT       0.001;
+
+functions
+{
+    chipTemperature
+    {
+        type            volFieldValue;
+        libs            ( fieldFunctionObjects );
+        region          chip;
+        fields          ( T );
+        operation       max;
+        regionType      all;
+        writeFields     false;
+        writeControl    timeStep;
+        writeInterval   20;
+        log             true;
+    }
+    heatSinkTemperature
+    {
+        type            volFieldValue;
+        libs            ( fieldFunctionObjects );
+        region          heatSink;
+        fields          ( T );
+        operation       volAverage;
+        regionType      all;
+        writeFields     false;
+        writeControl    timeStep;
+        writeInterval   20;
+        log             true;
+    }
+}
+
+
+// ************************************************************************* //
