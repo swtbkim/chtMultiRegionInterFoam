@@ -122,10 +122,6 @@ This is a demonstration solver; the checks below are internal sanity/consistency
 - [Performance tuning study](docs/tuning_study.md) — baseline vs tuned settings with per-step measurements, the opt-in tuned preset (-28% wall-clock, accuracy-neutral) and the M1 adaptive outer-corrector validation.
 - [Step-by-step tutorial](https://github.com/swtbkim/openfoam-tutorial-ko) (Korean, 예제 19 of `openfoam-tutorial-ko`) — physics, file-by-file case setup, meshing, running (serial & parallel) and post-processing, with the jet-interface and temperature-history results, plus an advanced-options / performance-tuning chapter that walks through each tuning-tested setting and the M1 option.
 
-## Citation
-
-If you use this solver, please cite it via [CITATION.cff](CITATION.cff) **and** acknowledge the upstream collection (below).
-
 ## Acknowledgements and license
 
 `chtMultiRegionInterFoam` is derived from **C. Schubert, [`OpenFOAM--MHD--VoF-Solver-Collection`](https://github.com/c-schubert/OpenFOAM--MHD--VoF-Solver-Collection)** (GPL-3), which itself combines the OpenFOAM standard solvers `compressibleInterFoam` and `chtMultiRegionFoam` (Copyright OpenFOAM Foundation / OpenCFD Ltd) with ideas from the DLR VoFLibrary, `varRhoTurbVOF` (Fan & Anglart) and isoAdvector (Roenby et al.). Please credit those works. The original upstream README is preserved in [`docs/porting/UPSTREAM_README.md`](docs/porting/UPSTREAM_README.md).
