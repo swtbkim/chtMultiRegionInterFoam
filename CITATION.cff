@@ -15,8 +15,8 @@ keywords:
   - multiphase flow
   - jet impingement cooling
   - electronics cooling
-version: "1.0.0"
-date-released: "2026-06-18"
+version: "1.1.0"
+date-released: "2026-10-14"
 references:
   - type: software
     title: "OpenFOAM--MHD--VoF-Solver-Collection"

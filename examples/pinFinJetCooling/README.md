@@ -43,6 +43,16 @@ fluid-then-solid) coupling, set `nOuterCorrectors 1` there. The VOF interface
 Courant limit `maxAlphaCo` (in `system/controlDict`) is honoured by the adaptive
 time step.
 
+## Baseline vs tuned settings
+
+The shipped dictionaries are the **conservative baseline** (`nCorrectors 2`,
+`nAlphaSubCycles 2`, `p_rgh relTol 0.01`, upwind `div(rhoPhi,T)`, `scotch`
+fluid decomposition) with the adaptive outer-corrector option (M1,
+`adaptiveOuterTol` / `adaptiveOuterSteps` in `system/fvSolution`) present but
+off. A **tuned preset** validated in the tuning study (about -28% wall-clock, accuracy-neutral)
+and the M1 option are described in
+[`docs/tuning_study.md`](../../docs/tuning_study.md); apply them by hand when needed.
+
 ## Expected results
 
 (Indicative; from the original `nOuterCorrectors 1` refined run.)
@@ -60,7 +70,8 @@ time step.
 paraFoam -touch-all       # then open in ParaView (Contour alpha.water = 0.5; T colour map)
 # or reproduce the report figures (interface isosurface frames):
 foamToVTK -allRegions -time '0,0.1,0.2,0.3,0.4,0.5' -fields '(alpha.water T)'
-pvbatch --force-offscreen-rendering render_interface.py
+pvbatch --force-offscreen-rendering render_interface.py   # writes figures/interface_t<time>.png
 ```
 
-See the full tutorial in [`docs/tutorial_chtMultiRegionInterFoam.md`](../../docs/tutorial_chtMultiRegionInterFoam.md).
+A step-by-step walkthrough of this case (Korean) is example 19 of
+[openfoam-tutorial-ko](https://github.com/swtbkim/openfoam-tutorial-ko).

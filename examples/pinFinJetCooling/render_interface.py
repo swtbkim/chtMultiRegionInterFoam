@@ -1,13 +1,23 @@
+# Render the water-air interface for every time exported by foamToVTK.
+# Usage (from the case directory, after foamToVTK -allRegions ...):
+#   pvbatch --force-offscreen-rendering render_interface.py [caseDir]
+import json, os, sys
 from paraview.simple import *
 paraview.simple._DisableFirstRenderCameraReset()
 
-CASE = "/home/kim/OpenFOAM/kim-v2412/run/pinFinJetCooling"
+CASE = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.getcwd())
+NAME = os.path.basename(CASE)          # foamToVTK prefixes files with the case name
 VTK  = CASE + "/VTK"
 OUT  = CASE + "/figures"
 NONE = ['POINTS', '']
+os.makedirs(OUT, exist_ok=True)
 
-FRAMES = [(0, "0.0"), (1483, "0.1"), (2964, "0.2"),
-          (4315, "0.3"), (5960, "0.4"), (7809, "0.5")]
+def time_label(t):
+    return "%.1f" % t if round(t, 1) == t else "%g" % t
+
+# (vtm file name, time label) for each exported time, from the fluid series file
+with open(f"{VTK}/fluid/{NAME}.vtm.series") as f:
+    FRAMES = [(e["name"], time_label(e["time"])) for e in json.load(f)["files"]]
 
 def internal(vtmfile):
     r  = XMLMultiBlockDataReader(FileName=[vtmfile])
@@ -15,10 +25,10 @@ def internal(vtmfile):
     m  = MergeBlocks(Input=eb)
     return r, eb, m
 
-def render_frame(idx, tlabel):
-    fr, feb, fluidIM = internal(f"{VTK}/fluid/pinFinJetCooling_{idx}.vtm")
-    hr, heb, hsIM    = internal(f"{VTK}/heatSink/pinFinJetCooling_{idx}.vtm")
-    cr, ceb, chipIM  = internal(f"{VTK}/chip/pinFinJetCooling_{idx}.vtm")
+def render_frame(vtm, tlabel):
+    fr, feb, fluidIM = internal(f"{VTK}/fluid/{vtm}")
+    hr, heb, hsIM    = internal(f"{VTK}/heatSink/{vtm}")
+    cr, ceb, chipIM  = internal(f"{VTK}/chip/{vtm}")
 
     # water-air interface alpha.water = 0.5
     fluidP = CellDatatoPointData(Input=fluidIM)
@@ -69,6 +79,6 @@ def render_frame(idx, tlabel):
               dc, chipIM, ceb, cr, dh, hsIM, heb, hr, fluidIM, feb, fr, rv):
         Delete(o)
 
-for idx, t in FRAMES:
-    render_frame(idx, t)
+for vtm, t in FRAMES:
+    render_frame(vtm, t)
 print("DONE")

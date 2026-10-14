@@ -30,6 +30,18 @@ All runs use OpenFOAM **v2412**.
   `(32 24 32)` serial run of the example confirms the interface Courant number is
   emitted and drives `deltaT`, the `energyCoupling` sub-loop fires each step, and
   temperatures stay bounded.
+- **Adaptive outer-corrector option (M1) and dead-code clean-up.** The driver
+  contains the optional adaptive outer-corrector reduction (PIMPLE
+  `adaptiveOuterTol` / `adaptiveOuterSteps`), **off by default**
+  (`adaptiveOuterTol 0`), and no longer carries the dead
+  `p_rgh.storePrevIter()` loop; `fluid/pEqn.H` selects `p_rghFinal` via the
+  driver's `finalIter`, which equals the previous condition whenever M1 does not
+  reduce a step. With M1 off the solver was checked against the previous release
+  on the example (serial, 48 x 36 x 48 mesh): over 35 steps to `t = 0.005 s` the
+  solver log is identical apart from timing/header lines, and over the full
+  0.02 s (181-step) window the iteration counts, temperatures and `alpha.water`
+  bounds are reproduced exactly. The M1 validation and the tuned-settings study
+  are in [`docs/tuning_study.md`](tuning_study.md).
 
 ## 2. Test case
 

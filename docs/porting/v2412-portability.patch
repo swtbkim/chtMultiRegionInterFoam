@@ -4,37 +4,38 @@
 #   mesh.data::remove("finalIteration");      ->  mesh.data().setFinalIteration(false);
 # Matches the idiom used by the native OpenFOAM v2412 chtMultiRegionFoam solver.
 # Upstream: c-schubert/OpenFOAM--MHD--VoF-Solver-Collection @ 7e0915d147a94058a515315907bbfda441169411
+# Apply from the upstream repository root with: patch -p1 < v2412-portability.patch
 
---- /home/kim/OpenFOAM/kim-v2412/applications/solvers/chtMultiRegionVoF/PATCHES/orig/chtMultiRegionInterFoam__fluid__solveFluid.H.orig	2026-06-18 15:37:24.100482206 +0900
-+++ /home/kim/OpenFOAM/kim-v2412/applications/solvers/chtMultiRegionVoF/solver/chtMultiRegionFoam/chtMultiRegionInterFoam/fluid/solveFluid.H	2026-06-18 15:37:24.104882205 +0900
+--- a/solver/chtMultiRegionFoam/chtMultiRegionInterFoam/fluid/solveFluid.H
++++ b/solver/chtMultiRegionFoam/chtMultiRegionInterFoam/fluid/solveFluid.H
 @@ -3,7 +3,7 @@
- 
+
  if (finalIter)
  {
 -    mesh.data::add("finalIteration", true);
 +    mesh.data().setFinalIteration(true);
  }
- 
- 
+
+
 @@ -41,5 +41,5 @@
- 
+
  if (finalIter)
  {
 -    mesh.data::remove("finalIteration");
 +    mesh.data().setFinalIteration(false);
  }
---- /home/kim/OpenFOAM/kim-v2412/applications/solvers/chtMultiRegionVoF/PATCHES/orig/solid__solveSolid.H.orig	2026-06-18 15:37:24.104882205 +0900
-+++ /home/kim/OpenFOAM/kim-v2412/applications/solvers/chtMultiRegionVoF/solver/chtMultiRegionFoam/solid/solveSolid.H	2026-06-18 15:37:24.104882205 +0900
+--- a/solver/chtMultiRegionFoam/solid/solveSolid.H
++++ b/solver/chtMultiRegionFoam/solid/solveSolid.H
 @@ -1,6 +1,6 @@
  if (finalIter)
  {
 -    mesh.data::add("finalIteration", true);
 +    mesh.data().setFinalIteration(true);
  }
- 
+
  {
 @@ -35,5 +35,5 @@
- 
+
  if (finalIter)
  {
 -    mesh.data::remove("finalIteration");

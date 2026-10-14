@@ -1,4 +1,4 @@
-// from compressibleInterFoam (unchanged)
+// from compressibleInterFoam; p_rghFinal selection uses the driver's finalIter (M1, see docs/tuning_study.md)
 {
     volScalarField rAU("rAU", 1.0/UEqn.A());
     surfaceScalarField rAUf("rAUf", fvc::interpolate(rAU));
@@ -114,7 +114,7 @@
               p_rgh.select
               (
                 (                
-                  oCorr == nOuterCorr-1
+                  finalIter    // == (oCorr == nOuterCorr-1) unless M1 reduces the step
                   && corr == nCorr-1
                   && nonOrth == nNonOrthCorr
                 )

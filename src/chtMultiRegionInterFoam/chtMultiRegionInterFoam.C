@@ -39,6 +39,10 @@ Description
     the solid regions use chtMultiRegionFoam conduction. Regions are coupled
     through compressible::turbulentTemperatureRadCoupledMixed boundaries.
 
+    Optional adaptive outer-corrector reduction (PIMPLE adaptiveOuterTol,
+    adaptiveOuterSteps; off by default): after a run of quasi-steady steps the
+    solver drops to a single tight outer corrector. See docs/tuning_study.md.
+
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
@@ -110,6 +114,15 @@ int main(int argc, char *argv[])
 
     Info<< "\nStarting time loop\n" << endl;
 
+    // M1: was the previous step fully quasi-steady (flow + thermal)? If so and
+    // adaptive outer correction is enabled, the next step uses a single tight
+    // outer corrector. Starts false so the run always begins fully coupled.
+    // A hysteresis counter requires several CONSECUTIVE quasi-steady steps
+    // before reducing correctors, so an isolated low-change step during an
+    // active transient cannot trigger an under-resolved (diverging) step.
+    bool prevStepQuasiSteady = false;
+    label steadyCount = 0;
+
     while (runTime.run())
     {
         #include "readTimeControls.H"
@@ -127,18 +140,38 @@ int main(int argc, char *argv[])
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
-        if (nOuterCorr != 1)
+        // QW4: the previous p_rgh.storePrevIter() loop was dead (p_rgh is never
+        // under-relaxed across outer correctors), so it was removed.
+
+        // --- M1: adaptive outer-corrector reduction ---
+        // On a step that the previous step flagged as fully quasi-steady (both
+        // flow and thermal change below adaptiveOuterTol), run a SINGLE outer
+        // corrector. That corrector is finalIter, so the tight Final solver
+        // settings apply (p_rghFinal in fluid/pEqn.H, TFinal, hFinal) and the
+        // step is not left under-resolved. It skips the second corrector and
+        // the energy sub-loop, halving the pressure solves on easy steps
+        // (about -35% pressure iterations, since the single corrector's last
+        // solve is the tight p_rghFinal). adaptiveOuterTol <= 0
+        // (default) disables this and reproduces the baseline exactly.
+        const scalar adaptiveOuterTol =
+            pimple.lookupOrDefault<scalar>("adaptiveOuterTol", 0.0);
+        const label adaptiveOuterSteps =
+            pimple.lookupOrDefault<label>("adaptiveOuterSteps", 5);
+        const bool adaptiveOuter = (adaptiveOuterTol > SMALL);
+
+        const int nOuterThis =
+            (adaptiveOuter && prevStepQuasiSteady) ? 1 : nOuterCorr;
+
+        if (adaptiveOuter && nOuterThis < nOuterCorr)
         {
-            forAll(fluidRegions, i)
-            {
-                #include "storeOldFluidFields.H"
-            }
+            Info<< "OUTER-EXIT: quasi-steady, using " << nOuterThis
+                << " outer corrector (tight)" << endl;
         }
 
         // --- PIMPLE loop
-        for (int oCorr=0; oCorr<nOuterCorr; ++oCorr)
+        for (int oCorr=0; oCorr<nOuterThis; ++oCorr)
         {
-            const bool finalIter = (oCorr == nOuterCorr-1);
+            const bool finalIter = (oCorr == nOuterThis-1);
 
             forAll(fluidRegions, i)
             {
@@ -159,7 +192,7 @@ int main(int argc, char *argv[])
             }
 
             // Additional loops for energy solution only
-            if (!oCorr && nOuterCorr > 1)
+            if (!oCorr && nOuterThis > 1)
             {
                 loopControl looping(runTime, pimple, "energyCoupling");
 
@@ -187,6 +220,60 @@ int main(int argc, char *argv[])
                     }
                 }
             }
+        }
+
+        // M1: measure this step's flow and thermal change (relative to the
+        // start-of-step oldTime values) to decide whether the NEXT step is
+        // quasi-steady. No extra field storage is needed.
+        if (adaptiveOuter)
+        {
+            scalar flowChange = 0;
+            forAll(fluidRegions, i)
+            {
+                const volVectorField& U = UFluid[i];
+                const scalar denom =
+                    gMax(mag(U.oldTime().primitiveField())) + SMALL;
+                flowChange = max
+                (
+                    flowChange,
+                    gMax(mag(U.primitiveField() - U.oldTime().primitiveField()))
+                  / denom
+                );
+            }
+
+            scalar thermChange = 0;
+            forAll(solidRegions, i)
+            {
+                const volScalarField& h = thermos[i].he();
+                const scalar denom =
+                    gMax(mag(h.oldTime().primitiveField())) + SMALL;
+                thermChange = max
+                (
+                    thermChange,
+                    gMax(mag(h.primitiveField() - h.oldTime().primitiveField()))
+                  / denom
+                );
+            }
+
+            if (flowChange < adaptiveOuterTol && thermChange < adaptiveOuterTol)
+            {
+                ++steadyCount;
+            }
+            else
+            {
+                steadyCount = 0;
+            }
+
+            // Only treat the next step as quasi-steady after enough consecutive
+            // settled steps (hysteresis), and drop straight back to full
+            // coupling on the first non-settled step.
+            prevStepQuasiSteady = (steadyCount >= adaptiveOuterSteps);
+
+            Info<< "adaptiveOuter: flowChange=" << flowChange
+                << " thermChange=" << thermChange
+                << " steadyCount=" << steadyCount
+                << " nextCorrectors=" << (prevStepQuasiSteady ? 1 : nOuterCorr)
+                << endl;
         }
 
         runTime.write();
