@@ -77,8 +77,8 @@ int main(int argc, char *argv[])
 {
     argList::addNote
     (
-        "Transient solver for two compressible, non-isothermal immiscible fluids"
-        "using VOF phase-fraction based interface capturing, with"
+        "Transient solver for two compressible, non-isothermal immiscible fluids "
+        "using VOF phase-fraction based interface capturing, with "
         "solid heat conduction with conjugate heat transfer "
         "between solid and fluid regions."
     );
