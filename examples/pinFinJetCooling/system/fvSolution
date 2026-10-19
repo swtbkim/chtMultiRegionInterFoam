@@ -14,39 +14,9 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-// Top-level (no global mesh): supplies the outer-corrector count read by the
-// multi-region driver, plus the energy-coupling sub-loop control.
-//
-// nOuterCorrectors > 1 makes the fluid<->solid coupling implicit within each
-// time step: after the first full fluid+solid update the driver runs an
-// energy-only sub-loop ("energyCoupling") that re-solves the fluid temperature
-// and the solid conduction with the flow frozen, tightening the conjugate heat
-// balance at the coupled walls before the next outer corrector.
-//
-// Set nOuterCorrectors 1 to fall back to the cheapest, fully-explicit
-// (segregated) coupling - one fluid solve then one solid solve per step.
-//
-// Advanced options (off here; see docs/tuning_study.md before enabling):
-//   adaptiveOuterTol > 0 drops a step to ONE outer corrector (no energy
-//   sub-loop; that corrector is the final iteration, so p_rgh, T and h use
-//   their Final solver settings) once flow and solid-thermal relative change
-//   per step have stayed below the tolerance for adaptiveOuterSteps
-//   consecutive steps. 0 = disabled, identical to the plain fixed-corrector
-//   driver.
-//   energyCoupling convergence { "T" 1e-3; } skips the energy sub-loop when the
-//   initial residual of the step's first fluid-T solve is below the tolerance.
 PIMPLE
 {
-    nOuterCorrectors 2;
-
-    adaptiveOuterTol    0;
-    adaptiveOuterSteps  5;
-
-    energyCoupling
-    {
-        iterations  2;
-        // convergence { "T" 1e-3; }
-    }
+    nOuterCorrectors 1;
 }
 
 // ************************************************************************* //
