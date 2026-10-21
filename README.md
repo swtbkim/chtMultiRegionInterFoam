@@ -19,7 +19,7 @@ The bundled example is **liquid-jet-impingement cooling of a pin-fin heat sink o
 
 ## Physics
 
-Per time step the multi-region PIMPLE driver solves each region in turn and couples them through the interface temperature condition. With `nOuterCorrectors > 1` (the example default), the first outer corrector is followed by an **energy-coupling sub-loop** that re-solves the fluid temperature and solid conduction with the flow frozen, making the conjugate coupling implicit within the step; `nOuterCorrectors 1` falls back to a single, fully-explicit (segregated) fluid-then-solid update.
+Per time step the multi-region PIMPLE driver solves each region in turn and couples them through the interface temperature condition. With `nOuterCorrectors 1` (the example default) each step is a single, fully-explicit (segregated) fluid-then-solid update. With `nOuterCorrectors > 1`, the first outer corrector is followed by an **energy-coupling sub-loop** (`energyCoupling { iterations N; }` in the PIMPLE dictionary) that re-solves the fluid temperature and solid conduction with the flow frozen, making the conjugate coupling implicit within the step.
 
 **Fluid region** (`compressibleInterFoam` formulation, phase 1 = liquid):
 
@@ -43,9 +43,8 @@ Per time step the multi-region PIMPLE driver solves each region in turn and coup
 Relative to the upstream v1912 source (beyond the mechanical v2412 portability patch), this distribution applies the following corrections and clean-ups. The fluid/solid finite-volume discretisation is otherwise unchanged.
 
 - **Interface-Courant time-step limiting (bug fix).** The adaptive time-step controller (`include/setMultiRegionDeltaT.H`) previously limited `deltaT` only by the bulk-flow Courant number and solid diffusion number; the VOF interface Courant number (`maxAlphaCo`) was computed and printed but **never applied**, so `maxAlphaCo` in `controlDict` had no effect. The controller now limits the fluid step by `min(maxCo/CoNum, maxAlphaCo/alphaCoNum)`, matching `compressibleInterFoam`. The initial step (`setInitialMultiRegionDeltaT.H`) is limited the same way.
-- **Conjugate coupling demonstrated.** The example now runs with `nOuterCorrectors 2` and an `energyCoupling` sub-loop (implicit per-step fluid<->solid coupling) instead of the fully-explicit `nOuterCorrectors 1`. Both modes are supported; see `system/fvSolution`.
-- **Adaptive outer-corrector reduction (M1, optional, off by default).** The driver can drop a time step to a single outer corrector (no `energyCoupling` sub-loop; that corrector is the final iteration, so `p_rgh`, `T` and `h` all use their Final solver settings - this needed a one-line fix in `fluid/pEqn.H`, which now selects `p_rghFinal` by the driver's `finalIter` instead of the configured outer-corrector count) once the relative per-step change of the flow and of the solid thermal field has stayed below `adaptiveOuterTol` for `adaptiveOuterSteps` consecutive steps (PIMPLE keys in the top-level `system/fvSolution`; defaults `0` and `5`). With `adaptiveOuterTol 0` the solver is bit-identical to the plain fixed-corrector driver. It pays off in quasi-steady / long thermal-design runs (in the tuning study at tolerance 0.5: -46% wall-clock on the baseline settings and a further -40% on the tuned preset, with at most 0.015 K chip-T drift); the consecutive-steps hysteresis keeps it dormant through transients at a conservative tolerance (at the loose 0.5 used in the study it also fires during start-up). See the [tuning study](docs/tuning_study.md) before enabling it.
-- **Dead code removed.** Unused single-region leftovers (`VoF/setDeltaT.H`, `VoF/setRDeltaT.H`, `VoF/alphaCourantNo.H`, `VoF/alphaEqnSubCycle.H`, `VoF/createAlphaFluxes.H`, `fluid/alphaEqn_bu.H`, `fluid/setMultiRegionRDeltaT.H`), the unused `initialMass` bookkeeping and the dead `nEnergyCorrectors` control were removed. The dead outer-corrector `p_rgh.storePrevIter()` loop (and its `fluid/storeOldFluidFields.H` header) was removed as well (QW4; `p_rgh` is never under-relaxed across outer correctors, so results are unchanged).
+- **Adaptive outer-corrector reduction (optional, off by default).** The driver can drop a time step to a single outer corrector (no `energyCoupling` sub-loop; that corrector is the final iteration, so `p_rgh`, `T` and `h` all use their Final solver settings - this needed a one-line fix in `fluid/pEqn.H`, which now selects `p_rghFinal` by the driver's `finalIter` instead of the configured outer-corrector count) once the relative per-step change of the flow and of the solid thermal field has stayed below `adaptiveOuterTol` for `adaptiveOuterSteps` consecutive steps (PIMPLE keys in the top-level `system/fvSolution`; defaults `0` and `5`). With `adaptiveOuterTol 0` the solver is bit-identical to the plain fixed-corrector driver. It is intended for quasi-steady / long thermal-design runs; the consecutive-steps hysteresis keeps it from firing on an isolated low-change step during a transient.
+- **Dead code removed.** Unused single-region leftovers (`VoF/setDeltaT.H`, `VoF/setRDeltaT.H`, `VoF/alphaCourantNo.H`, `VoF/alphaEqnSubCycle.H`, `VoF/createAlphaFluxes.H`, `fluid/alphaEqn_bu.H`, `fluid/setMultiRegionRDeltaT.H`), the unused `initialMass` bookkeeping and the dead `nEnergyCorrectors` control were removed. The dead outer-corrector `p_rgh.storePrevIter()` loop (and its `fluid/storeOldFluidFields.H` header) was removed as well (`p_rgh` is never under-relaxed across outer correctors, so results are unchanged).
 - **Source hygiene.** The application identity/description was corrected (it self-identified as `chtMultiRegionTwoPhaseEulerFoam`), and all non-ASCII / work-in-progress comments were converted to ASCII English.
 
 > **Pressure reference.** Like its parent `compressibleInterFoam`, the fluid solver sets the pressure level from the compressible thermodynamics and the boundary conditions; it does **not** carry a closed-domain `pRefCell`/`pRefValue` reference. Each fluid region therefore needs a pressure-referencing boundary (e.g. the `totalPressure` outlet in the example) or compressible pinning.
@@ -68,7 +67,6 @@ chtMultiRegionInterFoam/
 │   └── pinFinJetCooling/                 pin-fin heat sink, liquid jet impingement cooling
 └── docs/
     ├── verification_validation.md        sanity / consistency report
-    ├── tuning_study.md                   performance tuning study (tuned preset, M1)
     ├── porting/                          upstream provenance + v2412 portability patch
     └── figures/                          result figures
 ```
@@ -104,7 +102,7 @@ cd examples/pinFinJetCooling
 ./Allrun            # blockMesh -> topoSet -> createPatch -> splitMeshRegions -> decomposePar -> (parallel) solve -> reconstruct
 ```
 
-The example is a 3-region case (`fluid`, `heatSink`, `chip`) and runs **in parallel** (16 ranks by default; see `system/decomposeParDict`). For a quick single-core run, coarsen the mesh in `system/blockMeshDict` (e.g. `(32 24 32)`) and replace the parallel block of `Allrun` with a plain `runApplication $(getApplication)`. Clean with `./Allclean`. See [`examples/pinFinJetCooling/README.md`](examples/pinFinJetCooling/README.md).
+The example is a 3-region case (`fluid`, `heatSink`, `chip`) and runs **in parallel** (4 ranks by default; see `system/decomposeParDict`). For a quick single-core run, coarsen the mesh in `system/blockMeshDict` (e.g. `(32 24 32)`) and replace the parallel block of `Allrun` with a plain `runApplication $(getApplication)`. Clean with `./Allclean`. See [`examples/pinFinJetCooling/README.md`](examples/pinFinJetCooling/README.md).
 
 ## Verification & validation
 
@@ -119,8 +117,7 @@ This is a demonstration solver; the checks below are internal sanity/consistency
 ## Documentation
 
 - [Verification & validation report](docs/verification_validation.md)
-- [Performance tuning study](docs/tuning_study.md) — baseline vs tuned settings with per-step measurements, the opt-in tuned preset (-28% wall-clock, accuracy-neutral) and the M1 adaptive outer-corrector validation.
-- [Step-by-step tutorial](https://github.com/swtbkim/openfoam-tutorial-ko) (Korean, 예제 19 of `openfoam-tutorial-ko`) — physics, file-by-file case setup, meshing, running (serial & parallel) and post-processing, with the jet-interface and temperature-history results, plus an advanced-options / performance-tuning chapter that walks through each tuning-tested setting and the M1 option.
+- [Step-by-step tutorial](https://github.com/swtbkim/openfoam-tutorial-ko) (Korean, 예제 19 of `openfoam-tutorial-ko`) — physics, file-by-file case setup, meshing, running (serial & parallel) and post-processing, with the jet-interface and temperature-history results.
 
 ## Acknowledgements and license
 

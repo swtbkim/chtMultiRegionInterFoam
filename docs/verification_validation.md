@@ -23,25 +23,24 @@ All runs use OpenFOAM **v2412**.
   `twoPhaseSurfaceTension`) — i.e. the fluid-region discretisation is unmodified OpenFOAM.
 - **Corrections applied in this distribution** (see README "Changes in this
   distribution"): the adaptive time step now honours the VOF interface Courant
-  limit `maxAlphaCo` (previously computed but not applied), the example uses an
-  implicit `nOuterCorrectors 2` + `energyCoupling` conjugate coupling, and dead /
+  limit `maxAlphaCo` (previously computed but not applied), and dead /
   duplicated single-region code was removed. A clean build is verified by
   `Allwmake` (link to `$FOAM_USER_APPBIN/chtMultiRegionInterFoam`); a coarse
-  `(32 24 32)` serial run of the example confirms the interface Courant number is
-  emitted and drives `deltaT`, the `energyCoupling` sub-loop fires each step, and
-  temperatures stay bounded.
-- **Adaptive outer-corrector option (M1) and dead-code clean-up.** The driver
+  `(32 24 32)` serial run of the example (with `nOuterCorrectors 2` +
+  `energyCoupling`) confirms the interface Courant number is emitted and drives
+  `deltaT`, the `energyCoupling` sub-loop fires each step, and temperatures stay
+  bounded.
+- **Adaptive outer-corrector option and dead-code clean-up.** The driver
   contains the optional adaptive outer-corrector reduction (PIMPLE
   `adaptiveOuterTol` / `adaptiveOuterSteps`), **off by default**
   (`adaptiveOuterTol 0`), and no longer carries the dead
   `p_rgh.storePrevIter()` loop; `fluid/pEqn.H` selects `p_rghFinal` via the
-  driver's `finalIter`, which equals the previous condition whenever M1 does not
-  reduce a step. With M1 off the solver was checked against the previous release
-  on the example (serial, 48 x 36 x 48 mesh): over 35 steps to `t = 0.005 s` the
+  driver's `finalIter`, which equals the previous condition whenever the option
+  does not reduce a step. With the option off the solver was checked against
+  the previous release on the example (serial, 48 x 36 x 48 mesh): over 35 steps to `t = 0.005 s` the
   solver log is identical apart from timing/header lines, and over the full
   0.02 s (181-step) window the iteration counts, temperatures and `alpha.water`
-  bounds are reproduced exactly. The M1 validation and the tuned-settings study
-  are in [`docs/tuning_study.md`](tuning_study.md).
+  bounds are reproduced exactly.
 
 ## 2. Test case
 
@@ -58,9 +57,9 @@ Two resolutions were run: a coarse mesh (24,576 cells) to `t = 0.2 s` and a
 `maxCo = maxAlphaCo = 0.5`).
 
 > The quantitative tables in sections 3–7 are from the **original** runs (before
-> the interface-Courant fix and the `nOuterCorrectors 2` coupling change). They
-> remain representative of the qualitative behaviour; absolute numbers shift
-> slightly with the corrected time-step limiting and tighter coupling.
+> the interface-Courant fix), with the same `nOuterCorrectors 1` coupling the
+> example uses now. They remain representative of the qualitative behaviour;
+> absolute numbers shift slightly with the corrected time-step limiting.
 
 ## 3. Numerical stability (VOF boundedness)
 
@@ -123,7 +122,7 @@ on the pin array, **spreads radially** into a wavy liquid sheet, and the liquid
   `constant/fluid/turbulenceProperties` to RAS for engineering use.
 - No experimental comparison; absolute temperatures depend on the (illustrative)
   material properties, power and run time chosen for the demo.
-- The example now uses `nOuterCorrectors = 2` with an `energyCoupling` sub-loop
-  (implicit per-step conjugate coupling). Set `nOuterCorrectors 1` in the
-  top-level `system/fvSolution` for the cheaper, fully-explicit coupling if a run
-  needs maximum robustness over coupling accuracy.
+- The example uses `nOuterCorrectors 1` (fully-explicit, segregated
+  fluid-then-solid coupling). Set `nOuterCorrectors 2` with an `energyCoupling`
+  sub-loop in the top-level `system/fvSolution` for implicit per-step conjugate
+  coupling when coupling accuracy matters more than cost.

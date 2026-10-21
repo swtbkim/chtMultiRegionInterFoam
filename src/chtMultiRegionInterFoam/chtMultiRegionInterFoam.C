@@ -41,7 +41,7 @@ Description
 
     Optional adaptive outer-corrector reduction (PIMPLE adaptiveOuterTol,
     adaptiveOuterSteps; off by default): after a run of quasi-steady steps the
-    solver drops to a single tight outer corrector. See docs/tuning_study.md.
+    solver drops to a single tight outer corrector.
 
 \*---------------------------------------------------------------------------*/
 
@@ -114,9 +114,9 @@ int main(int argc, char *argv[])
 
     Info<< "\nStarting time loop\n" << endl;
 
-    // M1: was the previous step fully quasi-steady (flow + thermal)? If so and
-    // adaptive outer correction is enabled, the next step uses a single tight
-    // outer corrector. Starts false so the run always begins fully coupled.
+    // Adaptive outer correction: was the previous step fully quasi-steady
+    // (flow + thermal)? If so and the option is enabled, the next step uses a
+    // single tight outer corrector. Starts false so the run always begins fully coupled.
     // A hysteresis counter requires several CONSECUTIVE quasi-steady steps
     // before reducing correctors, so an isolated low-change step during an
     // active transient cannot trigger an under-resolved (diverging) step.
@@ -140,19 +140,15 @@ int main(int argc, char *argv[])
 
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
-        // QW4: the previous p_rgh.storePrevIter() loop was dead (p_rgh is never
-        // under-relaxed across outer correctors), so it was removed.
-
-        // --- M1: adaptive outer-corrector reduction ---
+        // --- Adaptive outer-corrector reduction ---
         // On a step that the previous step flagged as fully quasi-steady (both
         // flow and thermal change below adaptiveOuterTol), run a SINGLE outer
         // corrector. That corrector is finalIter, so the tight Final solver
         // settings apply (p_rghFinal in fluid/pEqn.H, TFinal, hFinal) and the
         // step is not left under-resolved. It skips the second corrector and
-        // the energy sub-loop, halving the pressure solves on easy steps
-        // (about -35% pressure iterations, since the single corrector's last
-        // solve is the tight p_rghFinal). adaptiveOuterTol <= 0
-        // (default) disables this and reproduces the baseline exactly.
+        // the energy sub-loop, halving the pressure solves on easy steps.
+        // adaptiveOuterTol <= 0 (default) disables this and reproduces the
+        // fixed-corrector driver exactly.
         const scalar adaptiveOuterTol =
             pimple.lookupOrDefault<scalar>("adaptiveOuterTol", 0.0);
         const label adaptiveOuterSteps =
@@ -222,9 +218,9 @@ int main(int argc, char *argv[])
             }
         }
 
-        // M1: measure this step's flow and thermal change (relative to the
-        // start-of-step oldTime values) to decide whether the NEXT step is
-        // quasi-steady. No extra field storage is needed.
+        // Adaptive outer correction: measure this step's flow and thermal
+        // change (relative to the start-of-step oldTime values) to decide
+        // whether the NEXT step is quasi-steady. No extra field storage is needed.
         if (adaptiveOuter)
         {
             scalar flowChange = 0;

@@ -22,10 +22,8 @@ interfaces. Initial/boundary fields are shipped per region in `0.orig/`.
 ./Allclean     # reset to a clean case
 ```
 
-`Allrun` runs **in parallel** (16 ranks; `system/decomposeParDict` and the
-per-region `system/<region>/decomposeParDict`). On a host with fewer physical
-cores than ranks, `Allrun` exports `OMPI_MCA_rmaps_base_oversubscribe=1` so MPI
-still starts (equivalently use `mpirun --use-hwthread-cpus`).
+`Allrun` runs **in parallel** (4 ranks; `system/decomposeParDict` and the
+per-region `system/<region>/decomposeParDict`).
 
 For a **quick serial run**, coarsen `system/blockMeshDict` to `(32 24 32)` and
 replace the decompose/parallel/reconstruct lines of `Allrun` with:
@@ -36,22 +34,13 @@ runApplication $(getApplication)
 
 ## Region coupling
 
-The top-level `system/fvSolution` sets `nOuterCorrectors 2` with an
-`energyCoupling` sub-loop, so the fluid<->solid conjugate coupling is solved
-**implicitly within each time step**. For the cheapest (fully-explicit,
-fluid-then-solid) coupling, set `nOuterCorrectors 1` there. The VOF interface
+The top-level `system/fvSolution` sets `nOuterCorrectors 1`: the cheapest,
+fully-explicit coupling (one fluid solve then one solid solve per step). For
+fluid<->solid conjugate coupling solved **implicitly within each time step**,
+set `nOuterCorrectors 2` there and add an `energyCoupling { iterations 2; }`
+sub-dictionary to `PIMPLE`. The VOF interface
 Courant limit `maxAlphaCo` (in `system/controlDict`) is honoured by the adaptive
 time step.
-
-## Baseline vs tuned settings
-
-The shipped dictionaries are the **conservative baseline** (`nCorrectors 2`,
-`nAlphaSubCycles 2`, `p_rgh relTol 0.01`, upwind `div(rhoPhi,T)`, `scotch`
-fluid decomposition) with the adaptive outer-corrector option (M1,
-`adaptiveOuterTol` / `adaptiveOuterSteps` in `system/fvSolution`) present but
-off. A **tuned preset** validated in the tuning study (about -28% wall-clock, accuracy-neutral)
-and the M1 option are described in
-[`docs/tuning_study.md`](../../docs/tuning_study.md); apply them by hand when needed.
 
 ## Expected results
 
